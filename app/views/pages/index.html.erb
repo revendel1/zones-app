@@ -1,0 +1,64 @@
+<%= javascript_include_tag "home", "data-turbo-track" => "reload" %>
+
+<div id="mainik">
+  <div id="stub-footer"></div>
+  <div id="footer">
+    <label id="wall_length_label"></label><br>
+    <label id="wall_2_length_label"></label>
+    <a id="internation" href="#" onclick="alert('Пример 1 сработал'); return false;">ENG</a><br>
+    <a id="FAQ" href="#" onclick="window.FAQDialog.showModal(); return false;">FAQ</a>
+  </div>
+</div>
+
+<dialog id="mesDialog">
+  <form method="dialog">
+    <p>Введите результат своего замера</p>
+    <p><input id = "measurement" type="number" max="0" step="0.01"></p>
+    <p><button id = "measure_enter" onclick="setMesValue()">Ввести значение</button>
+    <button>Закрыть</button></p>
+  </form>
+</dialog>
+<dialog id="routerDialog">
+  <form method="dialog">
+    <p><input id = "router_coef" type="number" min="0" step="1"></p>
+    <p><input name="freq" id = "router_frequency" type="radio" value="2.4">2.4 ГГц
+    <input name="freq" id = "router_frequency" type="radio" value="5.0">5 ГГц</p>
+    <p><button id = "router_enter" onclick="setRouterValue()">Ввести значения</button>
+    <button>Закрыть</button></p>
+  </form>
+</dialog>
+<dialog id="wallDialog">
+  <form method="dialog">
+    <p>Введите толщину стены в сантиметрах:  <input id = "wall_thickness" type="number" min="0" step="1" onchange="checkwallDialog()"></p>
+    <p><button id = "wall_enter" onclick="setWallThickness()" disabled="disabled">Ввести значение</button>
+  </form>
+</dialog>
+<dialog id="rectDialog">
+  <form method="dialog">
+    <p>Введите толщину стен в сантиметрах:  <input id = "rect_thickness" type="number" min="0" step="1" onchange="checkrectDialog()"></p>
+    <p><button id = "rect_enter" onclick="setrectThickness()" disabled="disabled">Ввести значение</button>
+  </form>
+</dialog>
+<dialog id="length_single_Dialog">
+  <form method="dialog">
+    <p>Введите длину стены в сантиметрах:  <input id="wall_length" type="number" min="0" step="1" onchange="checklengthDialog()"></p>
+    <p><button id = "wall_length_single_enter" onclick="setWallLengthSingle()" disabled="disabled">Ввести значение</button>
+  </form>
+</dialog>
+<dialog id="length_rect_Dialog">
+  <form method="dialog">
+    <p>Введите длину большей стены в см:  <input id="rect_length" type="number" min="0" step="1" onchange="checklengthrectDialog()"></p>
+    <p><button id = "wall_length_rect_enter" onclick="setWallLengthRect()" disabled="disabled">Ввести значение</button>
+  </form>
+</dialog>
+<dialog id="FAQDialog" onclick="document.getElementById('FAQDialog').close();">
+  <form method="dialog">
+   <p>Hello there</p>
+  </form>
+</dialog>
+<dialog id="zonesDialog">
+  <form method="dialog">
+    <p>Введите коэффициент приемника:  <input id="receiver_coef" type="number" min="0" step="1" onchange="checkzonesDialog()"></p>
+    <p><button id = "zones_values" onclick="setZonesValues()" disabled="disabled">Ввести значение</button>
+  </form>
+</dialog>

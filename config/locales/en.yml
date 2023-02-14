@@ -1,0 +1,16 @@
+en:
+  header:
+    title: "Diplom"
+  js:
+    body:
+      measure_result: "Enter your measure result: "
+      enter_result: "Enter result"
+      close: "Close"
+      wall_thickness: "Please enter wall thickness in sm: "
+      walls_thickness: "Please enter walls thickness in sm: "
+      tool: "Tool: "
+      material: "Material: "
+      eraser: "Eraser"
+      erase_all: "EraseAll"
+      zones: "Zones"
+      add_floor: "Add Floor"
