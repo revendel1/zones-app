@@ -89,11 +89,46 @@ var Picture = class Picture {
     canvas.width = picture.width * scale;
     canvas.height = picture.height * scale;
     let cx = canvas.getContext("2d");
-  
-    for (let y = 0; y < picture.height; y++) {
-      for (let x = 0; x < picture.width; x++) {
-        cx.fillStyle = picture.pixel(x, y);               // Устанавливает или возвращает цвет, градиент или шаблон, используемый для заливки
-        cx.fillRect(x * scale, y * scale, scale, scale);  // Рисует "залитый" прямоугольник
+
+    if ((picture.gradient == true) && false) {
+      for (let y = 0; y < picture.height - 1; y++) {
+        for (let x = 0; x < picture.width; x++) {
+          color_1 = picture.pixel(x, y);
+          color_2 = picture.pixel(x, y+1);
+          if ((available_colors.includes(color_1) == false) && (available_colors.includes(color_2) == false)) {
+            var gradient = cx.createLinearGradient(x*scale, y*scale, x*scale, (y+1)*scale);
+
+            // Добавляем два цвета
+            gradient.addColorStop(0, color_1);
+            gradient.addColorStop(1, color_2);
+            // Рисуем
+            cx.fillStyle = gradient;             
+            cx.fillRect(x * scale, y * scale, scale, scale*2);
+          }
+        }
+      }
+      for (let x = 0; x < picture.width - 1; x++) {
+        for (let y = 0; y < picture.width; y++) {
+          color_1 = picture.pixel(x, y);
+          color_2 = picture.pixel(x+1, y);
+          if ((available_colors.includes(color_1) == false) && (available_colors.includes(color_2) == false)) {
+            var gradient = cx.createLinearGradient(x*scale, y*scale, (x+1)*scale, y*scale);
+
+            // Добавляем два цвета
+            gradient.addColorStop(0, color_1);
+            gradient.addColorStop(1, color_2);
+            // Рисуем
+            cx.fillStyle = gradient;             
+            cx.fillRect(x * scale, y * scale, scale*2, scale);
+          }
+        }
+      }
+    } else {
+      for (let y = 0; y < picture.height; y++) {
+        for (let x = 0; x < picture.width; x++) {
+          cx.fillStyle = picture.pixel(x, y);               // Устанавливает или возвращает цвет, градиент или шаблон, используемый для заливки
+          cx.fillRect(x * scale, y * scale, scale, scale);  // Рисует "залитый" прямоугольник
+        }
       }
     }
     for (let {x, y} of picture.routers) {
@@ -352,6 +387,7 @@ var Picture = class Picture {
   
   var ColorSelect = class ColorSelect {
     constructor(state, {colors, dispatch}) {
+      this.colors = colors;
       this.select = elt("select", {
         onchange: () => dispatch({color: colors.find(item => item.name == this.select.value).color})
       }, ...colors.map(item => elt("option", {
@@ -359,7 +395,9 @@ var Picture = class Picture {
       }, item.name)));
       this.dom = elt("label", null, "Material: ", this.select);
     }
-    syncState(state) { this.select.value = state.color; }
+    syncState(state) {
+      this.select.value = this.colors.find(item => item.color == state.color).name; 
+    }
   }
   
   /*var WideSelect = class WideSelect {
@@ -737,6 +775,8 @@ var Picture = class Picture {
     done: [],
     doneAt: 0
   };
+  
+  var available_colors = ["#99d8f0", "#444c1d", "#44251d", "#796f5a", "#a03623", "#999999", "#738595", "#686c5e", "#99ff99"];
   
   var baseColors = [{name: "гипсокартон", color: "#99d8f0"},
                     {name: "стекло", color: "#444c1d"},

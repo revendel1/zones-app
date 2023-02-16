@@ -108,6 +108,8 @@ module Api
               coef = router[:coef].to_f * receiver_coef * ((3.0 / (router[:frequency].to_f * 10)) ** 2) / (16.0 * (Math::PI ** 2))
               {coef: coef, frequency: router[:frequency], x: router[:x], y: router[:y]}
             end
+
+            size = pixels.size
             p routers_coefs
 
             new_pixels = pixels.each_with_index.map do |pixel, i|
@@ -118,16 +120,18 @@ module Api
                 y = i / 350
                 dumpings = routers_coefs.map do |router|
                   dumping = 0
-                  if y > 150
-                    num = y / 160
-                    y -= 160 * num
-                    dumping += 25 * num
+                  y_cor = y
+                  if size > 350 * 150
+                    y_floor = y_cor / 160
+                    router_floor = router[:x] / 160
+                    y_cor += (router_floor - y_floor) * 160 
+                    dumping += 25 * (y_floor - router_floor).abs
                   end
-                  d = Math::sqrt(((x - router[:x]) ** 2) + ((y - router[:y]) ** 2)) * params[:wall_scale] / 100.0
+                  d = Math::sqrt(((x - router[:x]) ** 2) + ((y_cor - router[:y]) ** 2)) * params[:wall_scale] / 100.0
                   d = 0.01 if (d == 0)
                   dumping += 10*(Math::log10(router[:coef] / (d ** 2))).abs
                   walls.each do |wall|
-                    next unless doIntersect({ x: x, y: y }, { x: router[:x], y: router[:y] }, wall[:x].symbolize_keys, wall[:y].symbolize_keys)
+                    next unless doIntersect({ x: x, y: y_cor }, { x: router[:x], y: router[:y] }, wall[:x].symbolize_keys, wall[:y].symbolize_keys)
 
                     if (router[:frequency] == '2.4')       
                       record_dumping = MATERIAL_DUMPING[:freq_2].select{|x| x[:color] == wall[:color]}.first[:dumping]
@@ -142,9 +146,13 @@ module Api
                   end
                   dumping.round(0)
                 end
-                print dumpings
+                #print dumpings
                 min_dumping = dumpings.min * 2
-                (min_dumping < 256) ? "#00#{(0xff - min_dumping).to_s(16)}#{(min_dumping).to_s(16)}" : "#0000ff"
+                green_code = (0xff - min_dumping).to_s(16)
+                blue_code = (min_dumping).to_s(16)
+                green_code = "0" + green_code if green_code.length == 1
+                blue_code = "0" + blue_code if blue_code.length == 1
+                (min_dumping < 256) ? "#00#{green_code}#{blue_code}" : "#0000ff"
               end
             end
 
