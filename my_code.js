@@ -1,40 +1,41 @@
-var wall_scale = 0; // Масштаб длины стен на рисунке
-var scale = 5;      // Масштаб пикселей рисунка
-var position = {};  // Позиция курсора
-var startState = { // Начальное состояние рисунка
-  tool: "line",
-  color: "#999999",
-  thickness: 1,
-  picture: Picture.empty(350, 150, "#f0f0f0"),
-  gradient: false,
-  done: [],
-  doneAt: 0
-};
+var Picture = class Picture {
+  constructor(width, height, pixels, routers, measurements, walls, gradient = false) {
+    this.width = width;
+    this.height = height;
+    this.pixels = pixels;
+    this.routers = routers;
+    this.measurements = measurements;
+    this.walls = walls;
+    this.gradient = gradient;
+  }
 
-// Цвета материалов стен планировки
-var available_colors = ["#99d8f0", "#444c1d", "#44251d", "#796f5a", "#a03623", "#999999", "#738595", "#686c5e", "#99ff99"];
+  empty(width, height, color) {
+    let pixels = new Array(width * height).fill(color);
+    return new Picture(width, height, pixels, [], [], []);
+  }
 
-// Материалы стен планировки
-var baseColors = [{name: "гипсокартон", color: "#99d8f0"},
-                  {name: "стекло", color: "#444c1d"},
-                  {name: "двойное стекло", color: "#44251d"},
-                  {name: "дерево", color: "#796f5a"},
-                  {name: "кирпич", color: "#a03623"}, 
-                  {name: "бетон", color: "#999999"},
-                  {name: "металл", color: "#738595"},
-                  {name: "железобетон", color: "#686c5e"}];
+  pixel(x, y) {
+    return this.pixels[x + y * this.width];
+  }
 
-// Инструменты управления рисунком
-var baseTools = {line, rectangle, router, measure};
+  find_router(x, y) {
+    return this.routers.findIndex(item => (Math.abs(item.x - x) < 2) && (Math.abs(item.y - y) < 2));
+  }
 
-// Классы для управления инструментами
-var baseControls = [
-  ToolSelect, ColorSelect,  EraseAllButton, AddFloorButton, ZonesButton
-]; 
+  find_measurement(x, y) {
+    return this.measurements.findIndex(item => (Math.abs(item.x - x) < 3) && (Math.abs(item.y - y) < 3));
+  }
 
-// Метод создаёт HTML-элемент с заданным именем и атрибутами, и добавляет все остальные аргументы, 
-// которые получает, в качестве дочерних узлов, автоматически преобразовывая строки 
-// в текстовые узлы.
+  draw(pixels) {
+    let copy = this.pixels.slice();
+    for (let {x, y, color} of pixels) { 
+      copy[x + y * this.width] = color;
+    }
+    return new Picture(this.width, this.height, copy, this.routers, this.measurements, this.walls);
+  }
+}
+module.exports = Picture
+
 function elt(type, props, ...children) {
   let dom = document.createElement(type);
   if (props) Object.assign(dom, props);
@@ -45,54 +46,10 @@ function elt(type, props, ...children) {
   return dom;
 }
 
-// Класс, хранящий информацию о планировке
-var Picture = class Picture {
-  constructor(width, height, pixels, routers, measurements, walls, gradient = false) {
-    this.width = width;               // ширина, integer
-    this.height = height;             // высота, integer
-    this.pixels = pixels;             // цвета пикселей, array of strings
-    this.routers = routers;           // маршрутизаторы, array of hashes
-    this.measurements = measurements; // замеры, array of hashes
-    this.walls = walls;               // стены планировки, array of hashes
-  }
-  
-  // Метод, создающий пустую картинку заданной ширины, высоты и цвета
-  static empty(width, height, color) {
-    let pixels = new Array(width * height).fill(color);
-    return new Picture(width, height, pixels, [], [], []);
-  }
-  
-  // Метод, ищущий пиксель в одномерном массиве пикселей картинки
-  pixel(x, y) {
-    return this.pixels[x + y * this.width];
-  }
-  
-  // Метод, ищущий маршрутизатор по указанным координатам
-  find_router(x, y) {
-    return this.routers.findIndex(item => (Math.abs(item.x - x) < 2) && (Math.abs(item.y - y) < 2));
-  }
-  
-  // Метод, ищущий замер по указанным координатам
-  find_measurement(x, y) {
-    return this.measurements.findIndex(item => (Math.abs(item.x - x) < 3) && (Math.abs(item.y - y) < 3));
-  }
-  
-  // Метод, меняющий цвет только переданных пикселей 
-  draw(pixels) {
-    let copy = this.pixels.slice();
-    for (let {x, y, color} of pixels) { 
-      copy[x + y * this.width] = color;
-    }
-    return new Picture(this.width, this.height, copy, this.routers, this.measurements, this.walls);
-  }
+var wall_scale = 0;
+var scale = 5;
+var position = {};
 
-  // Метод, меняющий цвет всех переданных пикселей
-  draw_zones(new_pixels) {
-    return new Picture(this.width, this.height, new_pixels, this.routers, this.measurements, this.walls, true);
-  }
-}
-  
-// Класс для создания HTML-элемента <canvas> и управления им
 var PictureCanvas = class PictureCanvas {
   constructor(picture, pointerDown, pointerUp) {
     this.dom = elt("canvas", {
@@ -102,183 +59,48 @@ var PictureCanvas = class PictureCanvas {
     });
     this.syncState(picture);
   }
-  
+
   syncState(picture) {
     this.picture = picture;
     drawPicture(this.picture, this.dom, scale);
   }
 }
-  
-// Метод, изображающий фигуры на <canvas>
+module.exports = PictureCanvas
+
 function drawPicture(picture, canvas, scale) {
   canvas.width = picture.width * scale;
   canvas.height = picture.height * scale;
   let cx = canvas.getContext("2d");
-  if (false) {
-    for (let y = 0; y < picture.height - 1; y++) {
-      for (let x = 0; x < picture.width; x++) {
-        color_1 = picture.pixel(x, y);
-        color_2 = picture.pixel(x, y+1);
-        if ((available_colors.includes(color_1) == false) && (available_colors.includes(color_2) == false)) {
-          var gradient = cx.createLinearGradient(x*scale, y*scale, x*scale, (y+1)*scale);
-          gradient.addColorStop(0, color_1);
-          gradient.addColorStop(1, color_2);
-          cx.fillStyle = gradient;             
-          cx.fillRect(x * scale, y * scale, scale, scale*2);
-        }
-      }
-    }
-    for (let x = 0; x < picture.width - 1; x++) {
-      for (let y = 0; y < picture.width; y++) {
-        color_1 = picture.pixel(x, y);
-        color_2 = picture.pixel(x+1, y);
-        if ((available_colors.includes(color_1) == false) && (available_colors.includes(color_2) == false)) {
-          var gradient = cx.createLinearGradient(x*scale, y*scale, (x+1)*scale, y*scale);
-          gradient.addColorStop(0, color_1);
-          gradient.addColorStop(1, color_2);
-          cx.fillStyle = gradient;             
-          cx.fillRect(x * scale, y * scale, scale*2, scale);
-        }
-      }
-    }
-  } else {
-    // Заполняем <canvas> имеющимися цветами
-    for (let y = 0; y < picture.height; y++) {
-      for (let x = 0; x < picture.width; x++) {
-        cx.fillStyle = picture.pixel(x, y);
-        cx.fillRect(x * scale, y * scale, scale, scale);
-      }
+  for (let y = 0; y < picture.height; y++) {
+    for (let x = 0; x < picture.width; x++) {
+      cx.fillStyle = picture.pixel(x, y);
+      cx.fillRect(x * scale, y * scale, scale, scale);
     }
   }
   for (let {x, y} of picture.routers) {
-    // Для каждого маршрутизатора загружаем его изображение
     var img = new Image();
     img.src = "<%= asset_path('router.png') %>";
     img.onload = function() {
-      cx.drawImage(img, (x-2) * scale, (y-2) * scale, 5*scale, 5*scale);
+        cx.drawImage(img, (x-2) * scale, (y-2) * scale, 5*scale, 5*scale);
     };
   }
   for (let {x, y} of picture.measurements) {
-    // Для каждого замера загружаем его изображение
     var img2 = new Image();
     img2.src = "<%= asset_path('circle.png') %>";
     img2.onload = function() {
-      cx.drawImage(img2, (x-2) * scale, (y-2) * scale, 3*scale, 3*scale);
+        cx.drawImage(img2, (x-2) * scale, (y-2) * scale, 3*scale, 3*scale);
     };
   }
   if (picture.height > 150) {
-    // Если на планировке больше одного этажа
-    // то подписываем каждый из них
     let steps = Math.floor(picture.height / 160);
     cx.font = "40px serif";
     cx.fillStyle = "#000";
     for (let i = 0; i < steps; ++i) {
-      cx.fillText(`Floor ${i+1}:`, 2*scale, (i*160+9)*scale);
+      cx.fillText(`Этаж ${i+1}:`, 2*scale, (i*160+9)*scale);
     }
   }
 }
 
-// Метод, изображающий круг заданного радиуса на планировке
-function drawCircle({x, y}, state, drawn) {
-  let radius = state.thickness / 2;
-  let radiusC = Math.ceil(radius);
-  for (let dy = -radiusC; dy <= radiusC; dy++) {
-    for (let dx = -radiusC; dx <= radiusC; dx++) {
-      let dist = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
-      if (dist > radius) continue;
-      let l = y + dy, k = x + dx;
-      if (l < 0 || l >= state.picture.height ||
-          k < 0 || k >= state.picture.width) continue;
-      if ((state.color == "#f0f0f0") && 
-          (state.picture.pixel(k,l) == "#d0d0d0")) continue;
-      if (state.picture.pixel(k,l) == "#99ff99") continue;
-      drawn.push({x: k, y: l, color: state.color});
-    }
-  }
-  return drawn;
-}
-
-// Метод, изображающий прямую линию [стену] на планировке
-function drawLine(from, to, state) {
-  let points = [];
-  if (Math.abs(from.x - to.x) > Math.abs(from.y - to.y)) {
-    if (from.x > to.x) [from, to] = [to, from];
-    let slope = (to.y - from.y) / (to.x - from.x);
-    for (let {x, y} = from; x <= to.x; x++) {
-      y_cur = Math.round(y);
-      points.push({x, y_cur, color: state.color});
-      points = drawCircle({x, y: y_cur}, state, points);
-      y += slope;
-    }
-  } else {
-    if (from.y > to.y) [from, to] = [to, from];
-    let slope = (to.x - from.x) / (to.y - from.y);
-    for (let {x, y} = from; y <= to.y; y++) {
-      x_cur = Math.round(x);
-      points.push({x: x_cur, y, color: state.color});
-      points = drawCircle({x: x_cur, y}, state, points);
-      x += slope;
-    }
-  }
-  return points;
-}
-
-// Метод сохраняющий информацию о изображенной стене 
-function line(pos, state, dispatch) {
-  return end => {
-    let line = drawLine(pos, end, state);
-    if (wall_scale != 0) {
-      let value = Math.sqrt(Math.pow(Math.abs(pos.x - end.x), 2) + Math.pow(Math.abs(pos.y - end.y), 2)) * wall_scale;
-      document.getElementById('wall_length_label').innerHTML = `Wall length: ${Math.round(value * 100) / 100}sm`;
-    }
-    dispatch({picture: state.picture.draw(line)});
-  };
-}
-
-// Метод, изображающий комнату на планировке
-function rectangle(start, state, dispatch) {
-  function addSide(x1, y1, x2, y2, state, rect) {
-    let arr = drawLine({x: x1, y: y1}, {x: x2, y: y2}, state);
-    for (let point of arr) {
-      rect.push(point);
-    }
-    return rect;
-  }
-  function drawRectangle(pos) {
-    let xStart = Math.min(start.x, pos.x);
-    let yStart = Math.min(start.y, pos.y);
-    let xEnd = Math.max(start.x, pos.x);
-    let yEnd = Math.max(start.y, pos.y);
-    if (wall_scale != 0) {
-      let value_1 = (xEnd-xStart) * wall_scale;
-      let value_2 = (yEnd-yStart) * wall_scale;
-      document.getElementById('wall_length_label').innerHTML = `Длина стены 1: ${Math.round(value_1 * 100) / 100}см`;
-      document.getElementById('wall_2_length_label').innerHTML = `Длина стены 2: ${Math.round(value_2 * 100) / 100}см`;
-    }
-    let rect = [];
-    rect = addSide(xStart, yStart, xEnd, yStart, state, rect);
-    rect = addSide(xEnd, yStart, xEnd, yEnd, state, rect);
-    rect = addSide(xEnd, yEnd, xStart, yEnd, state, rect);
-    rect = addSide(xStart, yEnd, xStart, yStart, state, rect);
-    dispatch({picture: state.picture.draw(rect)});
-  }
-  drawRectangle(start);
-  return drawRectangle;
-}
-
-// Метод, сохраняющий информацию о маршрутизаторе
-function router(pos, state, dispatch, value) {
-  state.picture.routers.push({x: pos.x, y: pos.y, coef: value.coef, frequency: value.frequency});
-  dispatch({picture: state.picture.draw([])});
-}
-
-// Метод, сохраняющий информацию о замере
-function measure(pos, state, dispatch, value) {
-  state.picture.measurements.push({x: pos.x, y: pos.y, value: value});
-  dispatch({picture: state.picture.draw([])});
-}
-
-// Метод, обрабатывающий нажатия пользователя на экран
 PictureCanvas.prototype.mouse = function(downEvent, onDown) {
   if (downEvent.button != 0) return;
   let pos = pointerPosition(downEvent, this.dom);
@@ -297,36 +119,12 @@ PictureCanvas.prototype.mouse = function(downEvent, onDown) {
   this.dom.addEventListener("mousemove", move);
 };
 
-// Метод, отслеживающий позицию курсора на экране
 function pointerPosition(pos, domNode) {
   let rect = domNode.getBoundingClientRect();
   return {x: Math.floor((pos.clientX - rect.left) / scale),
           y: Math.floor((pos.clientY - rect.top) / scale)};
 }
 
-// Метод, обрабатывающий нажатия пользователя на экран
-PictureCanvas.prototype.touch = function(startEvent,onDown) {
-  let pos = pointerPosition(startEvent.touches[0], this.dom);
-  let onMove = onDown(pos);
-  startEvent.preventDefault();
-  if (!onMove) return;
-  let move = moveEvent => {
-    let newPos = pointerPosition(moveEvent.touches[0],
-                                this.dom);
-    if (newPos.x == pos.x && newPos.y == pos.y) return;
-    pos = newPos;
-    onMove(newPos);
-  };
-  let end = () => {
-    this.dom.removeEventListener("touchmove", move);
-    this.dom.removeEventListener("touchend", end);
-  };
-  this.dom.addEventListener("touchmove", move);
-  this.dom.addEventListener("touchend", end);
-};
-
-// Класс, реализующий контейнер <div> куда помещаются все остальные
-// графические элементы страницы
 var PixelEditor = class PixelEditor {
   constructor(state, document, config) {
     let {tools, controls, dispatch} = config;
@@ -488,7 +286,6 @@ var PixelEditor = class PixelEditor {
   }
 }
 
-// Класс, реализующий выпадающий список Инструментов
 var ToolSelect = class ToolSelect {
   constructor(state, {tools, dispatch}) {
     this.select = elt("select", {
@@ -501,7 +298,6 @@ var ToolSelect = class ToolSelect {
   syncState(state) { this.select.value = state.tool; }
 }
 
-// Класс, реализующий выпадающий список Материалов
 var ColorSelect = class ColorSelect {
   constructor(state, {colors, dispatch}) {
     this.colors = colors;
@@ -512,13 +308,169 @@ var ColorSelect = class ColorSelect {
     }, item.name)));
     this.dom = elt("label", null, "Material: ", this.select);
   }
-
   syncState(state) {
     this.select.value = this.colors.find(item => item.color == state.color).name; 
   }
 }
 
-// Класс, реализующий кнопку для очистки планировки
+function drawCircle({x, y}, state, drawn) {
+  let radius = state.thickness / 2;
+  let radiusC = Math.ceil(radius);
+  for (let dy = -radiusC; dy <= radiusC; dy++) {
+    for (let dx = -radiusC; dx <= radiusC; dx++) {
+      let dist = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+      if (dist > radius) continue;
+      let l = y + dy, k = x + dx;
+      if (l < 0 || l >= state.picture.height ||
+          k < 0 || k >= state.picture.width) continue;
+      if ((state.color == "#f0f0f0") && 
+          (state.picture.pixel(k,l) == "#d0d0d0")) continue;
+      if (state.picture.pixel(k,l) == "#99ff99") continue;
+      drawn.push({x: k, y: l, color: state.color});
+    }
+  }
+  return drawn;
+}
+
+function drawLine(from, to, state) {
+  let points = [];
+  if (Math.abs(from.x - to.x) > Math.abs(from.y - to.y)) {
+    if (from.x > to.x) [from, to] = [to, from];
+    let slope = (to.y - from.y) / (to.x - from.x);
+    for (let {x, y} = from; x <= to.x; x++) {
+      y_cur = Math.round(y);
+      points.push({x, y_cur, color: state.color});
+      points = drawCircle({x, y: y_cur}, state, points);
+      y += slope;
+    }
+  } else {
+    if (from.y > to.y) [from, to] = [to, from];
+    let slope = (to.x - from.x) / (to.y - from.y);
+    for (let {x, y} = from; y <= to.y; y++) {
+      x_cur = Math.round(x);
+      points.push({x: x_cur, y, color: state.color});
+      points = drawCircle({x: x_cur, y}, state, points);
+      x += slope;
+    }
+  }
+  return points;
+}
+
+function line(pos, state, dispatch) {
+  return end => {
+    let line = drawLine(pos, end, state);
+    if (wall_scale != 0) {
+      let value = Math.sqrt(Math.pow(Math.abs(pos.x - end.x), 2) + Math.pow(Math.abs(pos.y - end.y), 2)) * wall_scale;
+      document.getElementById('wall_length_label').innerHTML = `Длина стены: ${Math.round(value * 100) / 100}см`;
+    }
+    dispatch({picture: state.picture.draw(line)});
+  };
+}
+
+function rectangle(start, state, dispatch) {
+  function addSide(x1, y1, x2, y2, state, rect) {
+    let arr = drawLine({x: x1, y: y1}, {x: x2, y: y2}, state);
+    for (let point of arr) {
+      rect.push(point);
+    }
+    return rect;
+  }
+  function drawRectangle(pos) {
+    let xStart = Math.min(start.x, pos.x);
+    let yStart = Math.min(start.y, pos.y);
+    let xEnd = Math.max(start.x, pos.x);
+    let yEnd = Math.max(start.y, pos.y);
+    if (wall_scale != 0) {
+      let value_1 = (xEnd-xStart) * wall_scale;
+      let value_2 = (yEnd-yStart) * wall_scale;
+      document.getElementById('wall_length_label').innerHTML = `Длина стены 1: ${Math.round(value_1 * 100) / 100}см`;
+      document.getElementById('wall_2_length_label').innerHTML = `Длина стены 2: ${Math.round(value_2 * 100) / 100}см`;
+    }
+    let rect = [];
+    rect = addSide(xStart, yStart, xEnd, yStart, state, rect);
+    rect = addSide(xEnd, yStart, xEnd, yEnd, state, rect);
+    rect = addSide(xEnd, yEnd, xStart, yEnd, state, rect);
+    rect = addSide(xStart, yEnd, xStart, yStart, state, rect);
+    dispatch({picture: state.picture.draw(rect)});
+  }
+  drawRectangle(start);
+  return drawRectangle;
+}
+
+var around = [{dx: -1, dy: 0}, {dx: 1, dy: 0},
+                {dx: 0, dy: -1}, {dx: 0, dy: 1}];
+
+function fill({x, y}, state, dispatch) {
+  let targetColor = state.picture.pixel(x, y);
+  let drawn = [{x, y, color: state.color}];
+  for (let done = 0; done < drawn.length; done++) {
+    for (let {dx, dy} of around) {
+      let x = drawn[done].x + dx, y = drawn[done].y + dy;
+      if (x >= 0 && x < state.picture.width &&
+          y >= 0 && y < state.picture.height &&
+          state.picture.pixel(x, y) == targetColor &&
+          !drawn.some(p => p.x == x && p.y == y)) {
+        drawn.push({x, y, color: state.color});
+      }
+    }
+  }
+  dispatch({picture: state.picture.draw(drawn)});
+}
+
+function pick(pos, state, dispatch) {
+  let color = state.picture.pixel(pos.x, pos.y);
+  if ((color != "#d0d0d0") || (color != "#99ff99")) color = "#f0f0f0"; 
+  dispatch({color: color});
+}
+
+function router(pos, state, dispatch, value) {
+  state.picture.routers.push({x: pos.x, y: pos.y, coef: value.coef, frequency: value.frequency});
+  dispatch({picture: state.picture.draw([])});
+}
+
+function measure(pos, state, dispatch, value) {
+  state.picture.measurements.push({x: pos.x, y: pos.y, value: value});
+  dispatch({picture: state.picture.draw([])});
+}
+
+function zones(state, dispatch, params) {
+    let xhr = new XMLHttpRequest();
+    let json = JSON.stringify({
+      pixels: state.picture.pixels,
+      routers: state.picture.routers,
+      walls: state.picture.walls,
+      measurements: state.picture.measurements,
+      receiver_coef: params.coef,
+      wall_scale: wall_scale
+    });
+    xhr.open('POST', '/api/v1/zones');
+    xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
+    xhr.responseType = 'json';
+    xhr.send(json);
+    xhr.onload = function() {
+      if (xhr.status != 201) {
+        alert(`Error ${xhr.status}: ${xhr.statusText}`);
+      } else {
+      }
+      dispatch({picture: state.picture.draw_zones(xhr.response.pixels)});
+    };
+}
+
+function erase(state, dispatch) {
+
+}
+
+var EraserButton = class EraserButton {
+  constructor(state, {dispatch}) {
+    this.picture = state.picture;
+    this.dom = elt("button", {
+      id: "menu-button",
+      onclick: () => erase(state, dispatch)
+    }, "Eraser");
+  }
+  syncState(state) { this.picture = state.picture; }
+}
+
 var EraseAllButton = class EraseAllButton {
   constructor(state, {dispatch}) {
     this.picture = Picture.empty(350, 150, "#f0f0f0");
@@ -530,7 +482,6 @@ var EraseAllButton = class EraseAllButton {
   syncState(state) { this.picture = state.picture; }
 }
 
-// Класс, реализующий кнопку для запроса к серверной части
 var ZonesButton = class ZonesButton {
   constructor(state, {dispatch}) {
     this.state = state;
@@ -568,31 +519,6 @@ var ZonesButton = class ZonesButton {
   }
 }
 
-// Метод, делающий запрос к серверной части и обрабатывающий ответ
-function zones(state, dispatch, params) {
-  let xhr = new XMLHttpRequest();
-  let json = JSON.stringify({
-    pixels: state.picture.pixels,
-    routers: state.picture.routers,
-    walls: state.picture.walls,
-    measurements: state.picture.measurements,
-    receiver_coef: params.coef,
-    wall_scale: wall_scale
-  });
-  xhr.open('POST', '/api/v1/zones');
-  xhr.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-  xhr.responseType = 'json';
-  xhr.send(json);
-  xhr.onload = function() {
-    if (xhr.status != 201) { // анализируем HTTP-статус ответа, если статус не 201, то произошла ошибка
-      alert(`Error ${xhr.status}: ${xhr.statusText}`); // Выводим ее текст
-    }
-    // Отображаем полученный результат
-    dispatch({picture: state.picture.draw_zones(xhr.response.pixels)});
-  };
-}
-
-// Класс, реализующий кнопку для добавления еще одного этажа планировки
 var AddFloorButton = class AddFloorButton {
   constructor(state, {dispatch}) {
     this.picture = state.picture;
@@ -624,26 +550,49 @@ var AddFloorButton = class AddFloorButton {
   syncState(state) { this.picture = state.picture; }
 }
 
-// Метод, вызывающий обновление информации о планировке
 function historyUpdateState(state, action) {
   return Object.assign({}, state, action);
 }
-  
-// Метод, инициализацирующий главную страницу приложения
+
+var startState = {
+  tool: "line",
+  color: "#999999",
+  thickness: 1,
+  picture: Picture.empty(350, 150, "#f0f0f0"),
+  gradient: false,
+  done: [],
+  doneAt: 0
+};
+
+var available_colors = ["#99d8f0", "#444c1d", "#44251d", "#796f5a", "#a03623", "#999999", "#738595", "#686c5e", "#99ff99"];
+
+var baseColors = [{name: "гипсокартон", color: "#99d8f0"},
+                  {name: "стекло", color: "#444c1d"},
+                  {name: "двойное стекло", color: "#44251d"},
+                  {name: "дерево", color: "#796f5a"},
+                  {name: "кирпич", color: "#a03623"}, 
+                  {name: "бетон", color: "#999999"},
+                  {name: "металл", color: "#738595"},
+                  {name: "железобетон", color: "#686c5e"}];
+
+var baseTools = {line, rectangle, router, measure};
+
+var baseControls = [
+  ToolSelect, ColorSelect,  EraseAllButton, AddFloorButton, ZonesButton
+];
+
 function startPixelEditor({state = startState,
                            tools = baseTools,
                            colors = baseColors,
                            controls = baseControls}) {
-  // Если браузер нативно не поддерживает элемент dialog
   if (!document.createElement('dialog').showModal) {
-    import('/dist/dialog-polyfill.js') // Подгружаем polyfill
+    import('/dist/dialog-polyfill.js')
     .then(dialogPolyfill =>
       document.querySelectorAll('dialog')
-      .forEach(dialogPolyfill.registerDialog) // Применяем его для всех элементов на странице
+      .forEach(dialogPolyfill.registerDialog)
     )
   }
 
-  // Создаем объект класса PixelEditor, который инициализирует остальные объекты страницы
   let app = new PixelEditor(state, document, {
     tools,
     colors,
@@ -656,17 +605,12 @@ function startPixelEditor({state = startState,
   return app.dom;
 }
 
-
-//Вспомогательные методы, реализующие логику всплывающих диалоговых окон
-
-// Метод, сохраняющий введенную величину замера
 function setMesValue() {
   let button = document.getElementById("measure_enter");
   let value = document.getElementById("measurement").value;
   button.value = value;
 }
 
-// Метод, сохраняющий введенную информацию о марщрутизаторе
 function setRouterValue() {
   let button = document.getElementById("router_enter");
   let coef = document.getElementById("router_coef").value;
@@ -682,70 +626,60 @@ function setRouterValue() {
   }
 }
 
-// Метод, сохраняющий информацию о введенной толщине стены планировки
 function setWallThickness() {
   let button = document.getElementById("wall_enter");
   let value = document.getElementById("wall_thickness").value;
   button.value = value;
 }
 
-// Метод, проверяющий наличие ввода толщины стен
 function checkwallDialog() {
   let button = document.getElementById("wall_enter");
   let value = document.getElementById("wall_thickness").value;
   if (value > 0) button.removeAttribute('disabled');
 }
 
-// Метод, сохраняющий информацию о введенной толщине комнаты на планировке
 function setrectThickness() {
   let button = document.getElementById("rect_enter");
   let value = document.getElementById("rect_thickness").value;
   button.value = value;
 }
 
-// Метод, проверяющий наличие ввода толщины стен комнаты
 function checkrectDialog() {
   let button = document.getElementById("rect_enter");
   let value = document.getElementById("rect_thickness").value;
   if (value > 0) button.removeAttribute('disabled');
 }
 
-// Метод, сохраняющий информацию о введенной длине стены планировки
 function setWallLengthSingle() {
   let button = document.getElementById("wall_length_single_enter");
   let value = document.getElementById("wall_length").value;
   button.value = value;
 }
 
-// Метод, проверяющий наличие ввода длины стен
 function checklengthDialog() {
   let button = document.getElementById("wall_length_single_enter");
   let value = document.getElementById("wall_length").value;
   if (value > 0) button.removeAttribute('disabled');
 }
 
-// Метод, проверяющий наличие ввода длины стен комнаты
 function checklengthrectDialog() {
   let button = document.getElementById("wall_length_rect_enter");
   let value = document.getElementById("rect_length").value;
   if (value > 0) button.removeAttribute('disabled');
 }
 
-// Метод, сохраняющий информацию о введенной длине стены комнаты на планировке
 function setWallLengthRect() {
   let button = document.getElementById("wall_length_rect_enter");
   let value = document.getElementById("rect_length").value;
   button.value = value;
 }
 
-// Метод, проверяющий наличие ввода коэффициента усиления приемника
 function checkzonesDialog() {
   let button = document.getElementById("zones_values");
   let value = document.getElementById("receiver_coef").value;
   if (value > 0) button.removeAttribute('disabled');
 }
 
-// Метод, сохраняющий информацию о коэффициенте усиления приемника
 function setZonesValues() {
   let button = document.getElementById("zones_values");
   let coef = document.getElementById("receiver_coef").value;

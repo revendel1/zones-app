@@ -12,16 +12,16 @@
 
 <dialog id="mesDialog">
   <form method="dialog">
-    <p>Введите результат своего замера</p>
-    <p><input id = "measurement" type="number" max="0" step="0.01"></p>
+    <p>Введите результат своего замера: 
+    <input id = "measurement" type="number" max="0" step="0.01"></p>
     <p><button id = "measure_enter" onclick="setMesValue()">Ввести значение</button>
     <button>Закрыть</button></p>
   </form>
 </dialog>
 <dialog id="routerDialog">
   <form method="dialog">
-    <p><input id = "router_coef" type="number" min="0" step="1"></p>
-    <p><input name="freq" id = "router_frequency" type="radio" value="2.4">2.4 ГГц
+    <p>Коэффициент усиления роутера: <input id = "router_coef" type="number" min="0" step="1"></p>
+    <p>Частота: <input name="freq" id = "router_frequency" type="radio" value="2.4">2.4 ГГц
     <input name="freq" id = "router_frequency" type="radio" value="5.0">5 ГГц</p>
     <p><button id = "router_enter" onclick="setRouterValue()">Ввести значения</button>
     <button>Закрыть</button></p>
@@ -53,7 +53,15 @@
 </dialog>
 <dialog id="FAQDialog" onclick="document.getElementById('FAQDialog').close();">
   <form method="dialog">
-   <p>Hello there</p>
+   <p>Данное веб-приложение позволяет пользователю изобразить собственную планировку помещений,
+   задать материал и толщину стен на ней, а также указать расположение роутера и 
+   результаты произведенных замеров.
+   Результатом работы веб-приложения являются 
+   рассчитанные уровни качества сигнала во всех точках изображенной планировки, 
+   которые пользователь может использовать для выбора оптимального местоположения 
+   своего маршрутизатора и приемников сигнала.
+   </p><p>Расчеты производятся по математической модели "OneSlope Model"
+</p>
   </form>
 </dialog>
 <dialog id="zonesDialog">
