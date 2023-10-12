@@ -1,24 +1,4 @@
 # README
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Данное веб-приложение использует информацию о материалах и толщине стен и перекрытий здания, а также информацию о местоположении беспроводного маршрутизатора и его характеристиках для того, чтобы изобразить на заданной пользователем планировке помещений предполагаемые уровни сигнала. При этом зоны с плохим уровнем сигнала отмечаются цветами синего спектра, а зоны с хорошим уровнем сигнала отмечаются цветами зеленого спектра. Это помогает пользователям оценить, насколько удачно выбрано текущее местоположение их беспроводных маршрутизаторов и приемников сигнала и помогает улучшить покрытие многоэтажных зданий своим беспроводным сигналом. 
 
-Things you may want to cover:
-
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
